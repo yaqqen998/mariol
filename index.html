@@ -18,49 +18,35 @@
     /* fill the real mobile viewport, not the URL-bar-inflated one */
     height: 100vh; height: 100dvh;
   }
-  /* game is 960x576 (5:3). Fit inside any viewport, letterboxed, no scroll. */
+  /* game is 1080x1920 (9:16 portrait). Fit inside any viewport, letterboxed, no scroll. */
   #wrap {
     position: relative;
-    width: min(100vw, 166.67vh);
-    width: min(100vw, 166.67dvh);
+    width: min(100vw, 56.25vh);
+    width: min(100vw, 56.25dvh);
   }
   canvas {
     width: 100%; height: auto; display: block;
     image-rendering: pixelated; image-rendering: crisp-edges;
     background: #5fb2f0;
   }
-  .pad { position: absolute; bottom: 5%; display: flex; gap: clamp(10px, 2.5vmin, 18px); opacity: 0.55; direction: ltr; }
+  /* pads sit on the dark control deck at the bottom of the portrait canvas */
+  .pad { position: absolute; bottom: 2%; display: flex; gap: clamp(12px, 3.5vw, 20px); opacity: 0.35; direction: ltr; }
   #padL { left: 4%; } #padR { right: 4%; }
   .btn {
-    width: clamp(44px, 11vmin, 72px); height: clamp(44px, 11vmin, 72px);
-    border-radius: 50%; background: #fff3; border: 2px solid #fff6;
-    color: #fff; font-size: clamp(18px, 4.5vmin, 28px);
+    width: clamp(60px, 17vw, 86px); height: clamp(60px, 17vw, 86px);
+    border-radius: 50%; background: #fff2; border: 2px solid #fff4;
+    color: #fff; font-size: clamp(23px, 6.5vw, 34px);
     display: flex; align-items: center; justify-content: center;
     touch-action: none;
   }
   .btn:active { background: #fff6; }
   /* hide pads on devices with a real mouse/keyboard */
   @media (hover: hover) and (pointer: fine) { .pad { display: none; } }
-  /* portrait phones: shrink pads so they cover less of the game */
-  @media (orientation: portrait) {
-    .pad { bottom: 3%; }
-    .btn { width: clamp(40px, 12vw, 56px); height: clamp(40px, 12vw, 56px); font-size: 18px; }
-  }
-  /* rotate hint: only on touch devices held in portrait */
-  #hint {
-    display: none; position: fixed; top: 14%; left: 0; right: 0;
-    text-align: center; color: #8a93b8; font-family: sans-serif;
-    font-size: clamp(14px, 4vw, 18px); pointer-events: none;
-  }
-  @media (orientation: portrait) and (hover: none) {
-    #hint { display: block; }
-  }
 </style>
 </head>
 <body>
-<div id="hint">لفّ الموبايل بالعرض للعب أكبر</div>
 <div id="wrap">
-  <canvas id="game" width="960" height="576"></canvas>
+  <canvas id="game" width="1080" height="1920"></canvas>
   <div class="pad" id="padL">
     <div class="btn" id="btnL">◀</div>
     <div class="btn" id="btnR">▶</div>
@@ -345,8 +331,9 @@ function validateSprites() {
 // ===== js/engine.js =====
 // engine.js - shared game logic (browser + headless recorder). No DOM here.
 
-const VIEW_W = 320, VIEW_H = 192;
+const VIEW_W = 216, VIEW_H = 384;
 const ROWS = 12;
+const WORLD_YOFF = 150; // world (192px tall) is drawn this far below the top of the portrait view
 
 const GRAV = 760, GRAV_HELD = 340, MAXFALL = 300;
 const RUN_MAX = 120, ACC_G = 700, ACC_A = 500, FRICTION = 900;
@@ -632,7 +619,7 @@ function stepGame(s, inp, dt) {
   }
 
   // camera
-  const target = Math.min(Math.max(h.x - 110, 0), L.w * TILE - VIEW_W);
+  const target = Math.min(Math.max(h.x - 60, 0), L.w * TILE - VIEW_W);
   s.camX = Math.max(s.camX, Math.min(target, s.camX + 400 * dt));
   if (h.x < s.camX) { h.x = s.camX; if (h.vx < 0) h.vx = 0; }
 }
@@ -739,8 +726,8 @@ function render(ctx, s) {
     ctx.fillRect(0, i * bandH, VIEW_W, bandH);
   }
   // sun
-  disc(ctx, 268, 30, 12, '#ffe27a');
-  disc(ctx, 268, 30, 9, '#fff3ad');
+  disc(ctx, 168, 44, 12, '#ffe27a');
+  disc(ctx, 168, 44, 9, '#fff3ad');
   // clouds (parallax 0.35)
   for (let i = 0; i < 6; i++) {
     let cx = ((i * 137 - camX * 0.35) % (VIEW_W + 90) + VIEW_W + 90) % (VIEW_W + 90) - 45;
@@ -754,19 +741,28 @@ function render(ctx, s) {
   ctx.fillStyle = '#e3c07a';
   for (let i = 0; i < 8; i++) {
     let px = ((i * 260 - camX * 0.5) % (VIEW_W + 260) + VIEW_W + 260) % (VIEW_W + 260) - 130;
-    pyramid(ctx, Math.round(px), 158, 62 + (i % 3) * 16, 34 + (i % 2) * 9, i % 2 ? '#e8cb8d' : '#dfbf7c', '#c39a4e');
+    pyramid(ctx, Math.round(px), 158 + WORLD_YOFF, 62 + (i % 3) * 16, 34 + (i % 2) * 9, i % 2 ? '#e8cb8d' : '#dfbf7c', '#c39a4e');
   }
   // dunes (parallax 0.7)
   ctx.fillStyle = '#eccf8d';
   for (let i = 0; i < 10; i++) {
     let dx = ((i * 120 - camX * 0.7) % (VIEW_W + 160) + VIEW_W + 160) % (VIEW_W + 160) - 80;
-    dune(ctx, Math.round(dx), 168, 130, 22);
+    dune(ctx, Math.round(dx), 168 + WORLD_YOFF, 130, 22);
   }
   // palms (parallax 0.85)
   for (let i = 0; i < 7; i++) {
     let px = ((i * 190 + 60 - camX * 0.85) % (VIEW_W + 80) + VIEW_W + 80) % (VIEW_W + 80) - 40;
-    palm(ctx, Math.round(px), 160);
+    palm(ctx, Math.round(px), 160 + WORLD_YOFF);
   }
+
+  // control deck: dark sand band below the world (touch pads sit on it)
+  const deckY = WORLD_YOFF + ROWS * TILE;
+  ctx.fillStyle = '#3d2a16';
+  ctx.fillRect(0, deckY, VIEW_W, VIEW_H - deckY);
+  ctx.fillStyle = '#7a5a34';
+  ctx.fillRect(0, deckY, VIEW_W, 2);
+  ctx.fillStyle = '#57401f';
+  for (let i = 0; i < 12; i++) ctx.fillRect(i * 19 + 5, deckY + 8 + (i % 3) * 9, 8, 2);
 
   const L = s.level;
   // tiles
@@ -775,17 +771,17 @@ function render(ctx, s) {
     for (let tx = tx0; tx <= tx1; tx++) {
       const c = L.grid[ty * L.w + tx];
       if (!c) continue;
-      drawTile(ctx, c, tx * TILE - camX, ty * TILE, tx, ty, L, s);
+      drawTile(ctx, c, tx * TILE - camX, ty * TILE + WORLD_YOFF, tx, ty, L, s);
     }
   }
   // flag pole
   const fpx = L.flagX * TILE + 7 - camX;
   if (fpx > -20 && fpx < VIEW_W + 20) {
     ctx.fillStyle = '#e8e8f0';
-    ctx.fillRect(fpx, 24, 3, 8 * TILE + 8);
-    disc(ctx, fpx + 1, 22, 4, '#d9a441');
+    ctx.fillRect(fpx, 24 + WORLD_YOFF, 3, 8 * TILE + 8);
+    disc(ctx, fpx + 1, 22 + WORLD_YOFF, 4, '#d9a441');
     // flag (waves with frame)
-    const fy = 30 + Math.round(Math.sin(s.frame / 12) * 1.5);
+    const fy = 30 + WORLD_YOFF + Math.round(Math.sin(s.frame / 12) * 1.5);
     ctx.fillStyle = '#1e8f6e';
     for (let r = 0; r < 12; r++) {
       const wdt = 16 - Math.abs(r - 5);
@@ -802,16 +798,16 @@ function render(ctx, s) {
     const phase = Math.floor(s.frame / 7 + c.x / 24) % 4;
     const wscale = [1, 0.66, 0.3, 0.66][phase];
     const wpx = Math.max(2, Math.round(12 * wscale));
-    drawCoinScaled(ctx, sx + (12 - wpx) / 2, c.y, wpx);
+    drawCoinScaled(ctx, sx + (12 - wpx) / 2, c.y + WORLD_YOFF, wpx);
   }
   // coin pops
   if (s.coinPops) for (const p of s.coinPops) {
-    drawCoinScaled(ctx, p.x - camX, Math.round(p.y - p.t * 40), 12);
+    drawCoinScaled(ctx, p.x - camX, Math.round(p.y - p.t * 40) + WORLD_YOFF, 12);
   }
   // enemies
   for (const e of s.enemies) {
     if (!e.alive) continue;
-    const sx = Math.round(e.x - camX), sy = Math.round(e.y);
+    const sx = Math.round(e.x - camX), sy = Math.round(e.y) + WORLD_YOFF;
     if (sx < -20 || sx > VIEW_W + 20) continue;
     if (e.squashT > 0) drawMap(ctx, SCARAB.flat, SCARAB_PAL, sx, sy, false);
     else {
@@ -827,55 +823,55 @@ function render(ctx, s) {
     else if (!h.onGround) map = HERO.jump;
     else if (Math.abs(h.vx) > 8) map = Math.floor(h.anim) % 2 ? HERO.run2 : HERO.run1;
     else map = HERO.idle;
-    drawMap(ctx, map, HERO_PAL, Math.round(h.x) - 2 - camX, Math.round(h.y) - 1, h.dir < 0);
+    drawMap(ctx, map, HERO_PAL, Math.round(h.x) - 2 - camX, Math.round(h.y) - 1 + WORLD_YOFF, h.dir < 0);
   }
 
-  // HUD
+  // HUD (two compact rows for the narrow portrait view)
   ctx.fillStyle = 'rgba(20,20,40,0.35)';
-  ctx.fillRect(0, 0, VIEW_W, 14);
+  ctx.fillRect(0, 0, VIEW_W, 26);
   drawText(ctx, 'SCORE', 8, 4, 1, '#ffffff', '#202028');
   drawText(ctx, String(s.score).padStart(6, '0'), 44, 4, 1, '#ffd23e', '#202028');
-  drawCoinScaled(ctx, 108, 2, 10);
-  drawText(ctx, 'x' + String(s.coinsN).padStart(2, '0'), 120, 4, 1, '#ffffff', '#202028');
-  drawText(ctx, 'TIME', 176, 4, 1, '#ffffff', '#202028');
-  drawText(ctx, String(Math.max(0, Math.ceil(s.timeLeft))).padStart(3, '0'), 206, 4, 1, '#ffffff', '#202028');
-  drawMap(ctx, HERO.idle.slice(0, 9), HERO_PAL, 250, 1, false);
-  drawText(ctx, 'x' + s.lives, 268, 4, 1, '#ffffff', '#202028');
+  drawCoinScaled(ctx, 128, 2, 10);
+  drawText(ctx, 'x' + String(s.coinsN).padStart(2, '0'), 140, 4, 1, '#ffffff', '#202028');
+  drawText(ctx, 'TIME', 8, 16, 1, '#ffffff', '#202028');
+  drawText(ctx, String(Math.max(0, Math.ceil(s.timeLeft))).padStart(3, '0'), 38, 16, 1, '#ffffff', '#202028');
+  drawMap(ctx, HERO.idle.slice(0, 9), HERO_PAL, 128, 13, false);
+  drawText(ctx, 'x' + s.lives, 140, 16, 1, '#ffffff', '#202028');
 
   // overlays
   if (s.status === 'title') drawTitle(ctx, s);
   if (s.status === 'win' || s.status === 'done') {
     const msg = 'LEVEL COMPLETE!';
     const w = textWidth(msg, 2);
-    drawText(ctx, msg, Math.round((VIEW_W - w) / 2), 60, 2, '#ffd23e', '#7a1f2b');
+    drawText(ctx, msg, Math.round((VIEW_W - w) / 2), 150, 2, '#ffd23e', '#7a1f2b');
     const b = 'BONUS ' + Math.max(0, Math.floor(s.timeLeft)) * 10;
-    drawText(ctx, b, Math.round((VIEW_W - textWidth(b, 1)) / 2), 84, 1, '#ffffff', '#202028');
+    drawText(ctx, b, Math.round((VIEW_W - textWidth(b, 1)) / 2), 174, 1, '#ffffff', '#202028');
   }
   if (s.status === 'gameover') {
     ctx.fillStyle = 'rgba(10,10,20,0.6)';
     ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     const msg = 'GAME OVER';
-    drawText(ctx, msg, Math.round((VIEW_W - textWidth(msg, 2)) / 2), 80, 2, '#ff5a4e', '#401010');
+    drawText(ctx, msg, Math.round((VIEW_W - textWidth(msg, 2)) / 2), 160, 2, '#ff5a4e', '#401010');
   }
 }
 
 function drawTitle(ctx, s) {
   ctx.fillStyle = 'rgba(12,16,40,0.45)';
   ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-  // Arabic logo with shadow
-  const lx = Math.round((VIEW_W - LOGO_W * 3) / 2), ly = 26;
-  drawMap(ctx, LOGO_MAP, { '#': LOGO_SHADOW }, lx + 3, ly + 3, false, 3);
-  drawMap(ctx, LOGO_MAP, { '#': LOGO_COLOR }, lx, ly, false, 3);
+  // Arabic logo with shadow (2x so it fits the narrow view)
+  const lx = Math.round((VIEW_W - LOGO_W * 2) / 2), ly = 92;
+  drawMap(ctx, LOGO_MAP, { '#': LOGO_SHADOW }, lx + 2, ly + 2, false, 2);
+  drawMap(ctx, LOGO_MAP, { '#': LOGO_COLOR }, lx, ly, false, 2);
   const sub = 'MARIOL';
-  drawText(ctx, sub, Math.round((VIEW_W - textWidth(sub, 2)) / 2), 94, 2, '#ffd23e', '#202028');
+  drawText(ctx, sub, Math.round((VIEW_W - textWidth(sub, 2)) / 2), 140, 2, '#ffd23e', '#202028');
   const sub2 = 'AN OMRAN ADVENTURE';
-  drawText(ctx, sub2, Math.round((VIEW_W - textWidth(sub2, 1)) / 2), 114, 1, '#ffffff', '#202028');
+  drawText(ctx, sub2, Math.round((VIEW_W - textWidth(sub2, 1)) / 2), 160, 1, '#ffffff', '#202028');
   if (Math.floor(s.titleT * 2) % 2 === 0) {
     const p = 'PRESS ENTER OR TAP';
-    drawText(ctx, p, Math.round((VIEW_W - textWidth(p, 1)) / 2), 140, 1, '#9fe08a', '#202028');
+    drawText(ctx, p, Math.round((VIEW_W - textWidth(p, 1)) / 2), 210, 1, '#9fe08a', '#202028');
   }
   const w1 = 'WORLD 1-1';
-  drawText(ctx, w1, Math.round((VIEW_W - textWidth(w1, 1)) / 2), 158, 1, '#ffffff', '#202028');
+  drawText(ctx, w1, Math.round((VIEW_W - textWidth(w1, 1)) / 2), 236, 1, '#ffffff', '#202028');
 }
 
 function drawCoinScaled(ctx, dx, dy, wpx) {
@@ -1028,7 +1024,10 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 
-// touch buttons
+// touch buttons (hidden on devices with no touch - headless CSS media can lie)
+if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) {
+  for (const el of document.querySelectorAll('.pad')) el.style.display = 'none';
+}
 const touchState = { left: false, right: false, jump: false };
 function bindBtn(id, prop) {
   const el = document.getElementById(id);
